@@ -1,11 +1,12 @@
-package service;
-import domain.NewsArticle;
+package com.project.service;
+import com.project.domain.NewsArticle;
+import lombok.extern.slf4j.Slf4j;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import repository.NewsArticleRepositry;
+import com.project.repository.NewsArticleRepository;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -14,15 +15,20 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
+@Slf4j
 @Service
 public class NewsArticleService
 {
     @Autowired
-    private static NewsArticleRepositry newsArticleRepositry;
+    private NewsArticleRepository newsArticleRepository;
 
-    public static void crawlingForJustIn() {
+    public void crawlingForJustIn() {
+
+        log.trace("crawlingForJustIn ");
         int offset = 0;
         int size = 250;
         int total = 250;
@@ -95,10 +101,10 @@ public class NewsArticleService
         }
     }
 
-    public static void saveOrUpdateArticle(String url, String title, String topic, String synopsis, LocalDateTime publishedAt){
+    public void saveOrUpdateArticle(String url, String title, String topic, String synopsis, LocalDateTime publishedAt){
         // check if the article already exists in the database
-        Optional<NewsArticle> optionalNewsArticle = newsArticleRepositry.findByUrl(url);
-
+        Optional<NewsArticle> optionalNewsArticle = newsArticleRepository.findByUrl(url);
+        log.info("saveOrUpdateArticle ");
         if(optionalNewsArticle.isPresent()){
             NewsArticle article = optionalNewsArticle.get();
 
@@ -109,12 +115,13 @@ public class NewsArticleService
                 !article.getPublishedAt().equals(publishedAt)){
 
                 // update the article fields
+                article.setId(UUID.randomUUID().toString()); // Ensure the ID is a String
                 article.setTitle(title);
                 article.setTopic(topic);
                 article.setSynopsis(synopsis);
                 article.setPublishedAt(publishedAt);
 
-                newsArticleRepositry.save(article);
+                newsArticleRepository.save(article);
                 System.out.println("Article '" + title + "' updated in the database.");
             } else {
                 System.out.println("Article '" + title + "' already exists and is up to date.");
@@ -122,9 +129,14 @@ public class NewsArticleService
         }else{
             // create and save a new article
             NewsArticle newArticle = new NewsArticle(url, title, topic, synopsis, publishedAt);
-            newsArticleRepositry.save(newArticle);
+            newsArticleRepository.save(newArticle);
             System.out.println("Article '" + title + "' saved to the database.");
+            System.out.println("Article '" + url + "' saved to the database.");
         }
+    }
 
+    // 모든 뉴스를 가져오는 서비스 메서드
+    public List<NewsArticle> getAllNews() {
+        return newsArticleRepository.findAll(); // 모든 뉴스 데이터 반환
     }
 }
